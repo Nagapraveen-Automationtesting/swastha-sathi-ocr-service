@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+easyocr
+pillow
+pdf2image
+poppler-utils  # You must install this system-level tool separately
+torch
+transformers
+scikit-learn
+pandas
+transformers
+openai
+ollama
