@@ -87,7 +87,7 @@ def extract_vitals(text: str) -> dict:
 
     return output
 
-openai_api_key = "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"
+openai_api_key = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 def extract_vitals_with_gpt(report_text: str) -> dict:
     prompt = f"""
         You are a medical AI assistant. Extract vitals from the following diagnostic report text and return JSON in the format:
