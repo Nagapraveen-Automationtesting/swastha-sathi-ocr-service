@@ -6,6 +6,7 @@ import openai
 from PIL import Image
 from io import BytesIO
 import numpy as np
+import requests
 from ollama import Client
 from openai import OpenAI
 from pdf2image import convert_from_bytes
@@ -134,7 +135,7 @@ def extract_vitals_with_gpt(report_text: str) -> dict:
 
 def extract_vitals_from_in_house_model(text: str):
     try:
-        client = Client(host='http://localhost:11434')
+        # client = Client(host='http://localhost:11434')
         prompt = f"""
             You are a medical AI assistant. Extract only medical vitals from the following text and return a JSON object with this structure:
 
@@ -155,16 +156,20 @@ def extract_vitals_from_in_house_model(text: str):
             Text:
             {text}
             """
-        response = client.chat(model='mistral', messages=[{
-            'role': 'user',
-            'content': prompt
-        }])
-
-        print("Model Response:")
-        print(response['message'])
-        print(response['message']['content'])
-        resp = json.loads(response['message']['content'])
-        return resp
+        # response = client.chat(model='mistral', messages=[{
+        #     'role': 'user',
+        #     'content': prompt
+        # }])
+        response = requests.post("http://34.128.128.204:80/generate", json={"prompt":prompt}, headers={"Content-Type": "application/json"})
+        ss = response.text
+        sss = json.dumps(ss)
+        print(f"Model Response: {sss}")
+        # print(response['message'])
+        # print(response['message']['content'])
+        # resp = json.loads(response['message']['content'])
+        return sss
     except Exception as e:
         traceback.print_exc()
         return {"error": str(e)}
+
+# def extract_vitals_from_gpu_in_house_model(text: str):text
