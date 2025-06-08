@@ -1,6 +1,6 @@
 import os
 import traceback
-
+from pathlib import Path
 import easyocr
 import openai
 from PIL import Image
@@ -13,6 +13,13 @@ from pdf2image import convert_from_bytes
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import re
 import json
+import tempfile
+import os
+from google.cloud import storage
+import mimetypes
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath("D:\Workspace\Dev_Workspace\Backend_Workspace\swasthasathi-service\swasthasathi-service-230325\GCP\swasthasathi-nlp-9d6ed68ff022.json")
+
 
 reader = easyocr.Reader(['en'])  # English support
 
@@ -21,7 +28,6 @@ def extract_text_from_image(image_bytes: bytes) -> str:
     image_np = np.array(image)
     results = reader.readtext(image_np, detail=0)
     return "\n".join(results)
-
 
 def extract_text_from_image_bytes(image_bytes: bytes) -> str:
     image = Image.open(BytesIO(image_bytes)).convert("RGB")
@@ -132,10 +138,8 @@ def extract_vitals_with_gpt(report_text: str) -> dict:
         print("OpenAI API Error:", e)
         return {}
 
-
 def extract_vitals_from_in_house_model(text: str):
     try:
-        # client = Client(host='http://localhost:11434')
         prompt = f"""
             You are a medical AI assistant. Extract only medical vitals from the following text and return a JSON object with this structure:
 
@@ -156,20 +160,56 @@ def extract_vitals_from_in_house_model(text: str):
             Text:
             {text}
             """
-        # response = client.chat(model='mistral', messages=[{
-        #     'role': 'user',
-        #     'content': prompt
-        # }])
-        response = requests.post("http://34.128.128.204:80/generate", json={"prompt":prompt}, headers={"Content-Type": "application/json"})
-        ss = response.text
-        sss = json.dumps(ss)
-        print(f"Model Response: {sss}")
-        # print(response['message'])
-        # print(response['message']['content'])
-        # resp = json.loads(response['message']['content'])
-        return sss
+        payload = {
+            "model": "mistral:latest",
+            "prompt": prompt,
+            "stream": False,
+            "format": "json"
+        }
+        response = requests.post("http://localhost:11434/api/generate", json=payload,
+                                 headers={"Content-Type": "application/json"})
+        response.raise_for_status()
+        data = response.json()
+        vitals_data = data.get("response")
+        if isinstance(vitals_data, str):
+            return json.loads(vitals_data)
+
+        print(f"Model Response: {vitals_data}")
+        return vitals_data
     except Exception as e:
         traceback.print_exc()
         return {"error": str(e)}
 
-# def extract_vitals_from_gpu_in_house_model(text: str):text
+async def download_and_process_temp_file(file_name: str):
+    # Initialize client
+    storage_client = storage.Client()
+    print(f"\n\n\n\nDownloading file: {file_name}\n\n\n\n")
+    # Get the bucket and blob
+    bucket = storage_client.bucket("ss-ocr-new")
+    blob = bucket.blob(file_name)
+    temp_dir = Path("./TEMP").resolve()
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_file_path = temp_dir / Path(file_name).name
+
+    # Download blob to temporary file
+    blob.download_to_filename(temp_file_path)
+    print("Download complete.")
+
+    try:
+        # --- Your processing logic here ---
+        with open(temp_file_path, 'rb') as f:
+            contents = f.read()
+            content_type, _ = mimetypes.guess_type(str(temp_file_path))
+            if content_type is None:
+                content_type = "application/octet-stream"
+            text = extract_text(contents, content_type)
+            print(f"\n\n**********************{content_type}********************************")
+            print(f"Extracted text : {text}")
+
+            print(f"******************************************************\n\n")
+            return  text
+    finally:
+        # Clean up: Delete the temp file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+            print(f"Temporary file {temp_file_path} deleted.")
