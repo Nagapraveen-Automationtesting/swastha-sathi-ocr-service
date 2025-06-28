@@ -18,8 +18,7 @@ import os
 from google.cloud import storage
 import mimetypes
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath("D:\Workspace\Dev_Workspace\Backend_Workspace\swasthasathi-service\swasthasathi-service-230325\GCP\swasthasathi-nlp-9d6ed68ff022.json")
-
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath("./GCP/swasthasathi-nlp-dac9d90e74f0.json")
 
 reader = easyocr.Reader(['en'])  # English support
 
@@ -166,7 +165,7 @@ def extract_vitals_from_in_house_model(text: str):
             "stream": False,
             "format": "json"
         }
-        response = requests.post("http://localhost:11434/api/generate", json=payload,
+        response = requests.post("http://host.docker.internal:11434/api/generate", json=payload,
                                  headers={"Content-Type": "application/json"})
         response.raise_for_status()
         data = response.json()

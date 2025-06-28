@@ -48,7 +48,7 @@ async def extract_vitals(path: str):
             print(f"Time taken to extract vitals: {end_q_time - start_q_time}")
             print(f"Total Time taken to extract vitals: {end_q_time - start_time}")
 
-            return { "success": True, "extracted_vitals": extracted_vitals }
+            return { "success": True, "extracted_vitals": extracted_vitals, "raw_text": text}
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=str(e))
